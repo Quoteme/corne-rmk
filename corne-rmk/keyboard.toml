@@ -1,0 +1,53 @@
+[keyboard]
+name = "corne-rmk"
+product_name = "corne-rmk"
+vendor_id = 0x4c4b
+product_id = 0x4643
+manufacturer = "RMK"
+chip = "nrf52840"
+
+[layout]
+rows = 4
+cols = 12
+layers = 2
+keymap = [
+    [
+        ["Q", "W", "E", "R", "T", "Y", "U", "I", "O", "P", "[", "]"],
+        ["A", "S", "D", "F", "G", "H", "J", "K", "L", ";", "'", "Ent"],
+        ["Z", "X", "C", "V", "B", "N", "M", ",", ".", "/", "RSft", "BSPC"],
+        ["LCtrl", "LAlt", "LGui", "MO(1)", "Spc", "BSPC", "LGui", "RGui", "MO(1)", "RAlt", "RCtrl", "RShift"]
+    ],
+    [
+        ["_", "_", "_", "_", "_", "_", "_", "_", "_", "_", "_", "_"],
+        ["_", "_", "_", "_", "_", "_", "_", "_", "_", "_", "_", "_"],
+        ["_", "_", "_", "_", "_", "_", "_", "_", "_", "_", "_", "_"],
+        ["_", "_", "_", "_", "_", "_", "_", "_", "_", "_", "_", "_"]
+    ]
+]
+
+[ble]
+enabled = true
+
+[behavior]
+tap_hold = { enable_hrm = true }
+
+[split]
+connection = "ble"
+
+[split.central]
+rows = 4
+cols = 6
+row_offset = 0
+col_offset = 0
+[split.central.matrix]
+input_pins = ["P0_09", "P0_10", "P1_00", "P0_11"]
+output_pins = ["P1_06", "P1_04", "P1_02", "P0_28", "P0_02", "P0_03"]
+
+[[split.peripheral]]
+rows = 4
+cols = 6
+row_offset = 0
+col_offset = 6
+[split.peripheral.matrix]
+input_pins = ["P0_09", "P0_10", "P1_00", "P0_11"]
+output_pins = ["P1_06", "P1_04", "P1_02", "P0_28", "P0_02", "P0_03"]
