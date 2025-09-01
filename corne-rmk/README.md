@@ -1,4 +1,4 @@
-# RMK 
+# RMK
 
 RMK is a feature-rich and easy-to-use keyboard firmware.
 
@@ -30,3 +30,9 @@ Most nice!nano compatible boards have bootloader with SoftDevice pre-flashed. Si
 ### Additional notes
 
 RMK defaults to USB-priority mode if a USB cable is connected. After flashing, remember to disconnect the USB cable, or [switch to BLE-priority mode](https://rmk.rs/docs/features/wireless.html#multiple-profile-support) by pressing User11(Switch Output) key.
+
+### Helpful information regarding the Nice!Nano V2 for RMK
+
+You can find a pinout of a Nice!Nano V2 here: [https://kriscables.com/nicenano-faq/](https://kriscables.com/nicenano-faq/)
+
+The average Corne PCB's pinout can be found here: [https://www.reddit.com/media?url=https%3A%2F%2Fpreview.redd.it%2Fcrkbd-corne-wiring-diagram-v0-b08fd55z4l1c1.png%3Fauto%3Dwebp%26s%3D2eb7eaac92b09fa9d35266bd9328bb0bf02619ce](https://www.reddit.com/media?url=https%3A%2F%2Fpreview.redd.it%2Fcrkbd-corne-wiring-diagram-v0-b08fd55z4l1c1.png%3Fauto%3Dwebp%26s%3D2eb7eaac92b09fa9d35266bd9328bb0bf02619ce)

@@ -1,53 +1,72 @@
 [keyboard]
 name = "corne-rmk"
-product_name = "corne-rmk"
+product_name = "corne"
 vendor_id = 0x4c4b
 product_id = 0x4643
-manufacturer = "RMK"
+manufacturer = "rmk"
 chip = "nrf52840"
 
 [layout]
+# WARNING: Currently row2col/col2row is set in RMK's feature gate, configs here do nothing actually
+# row2col = true
 rows = 4
 cols = 12
-layers = 2
-keymap = [
-    [
-        ["Q", "W", "E", "R", "T", "Y", "U", "I", "O", "P", "[", "]"],
-        ["A", "S", "D", "F", "G", "H", "J", "K", "L", ";", "'", "Ent"],
-        ["Z", "X", "C", "V", "B", "N", "M", ",", ".", "/", "RSft", "BSPC"],
-        ["LCtrl", "LAlt", "LGui", "MO(1)", "Spc", "BSPC", "LGui", "RGui", "MO(1)", "RAlt", "RCtrl", "RShift"]
-    ],
-    [
-        ["_", "_", "_", "_", "_", "_", "_", "_", "_", "_", "_", "_"],
-        ["_", "_", "_", "_", "_", "_", "_", "_", "_", "_", "_", "_"],
-        ["_", "_", "_", "_", "_", "_", "_", "_", "_", "_", "_", "_"],
-        ["_", "_", "_", "_", "_", "_", "_", "_", "_", "_", "_", "_"]
-    ]
-]
+layers = 1
+matrix_map = """
+(0,0) (0,1) (0,2) (0,3) (0,4) (0,5) (0,6) (0,7) (0,8) (0,9) (0,10) (0,11)
+(1,0) (1,1) (1,2) (1,3) (1,4) (1,5) (1,6) (1,7) (1,8) (1,9) (1,10) (1,11)
+(2,0) (2,1) (2,2) (2,3) (2,4) (2,5) (2,6) (2,7) (2,8) (2,9) (2,10) (2,11)
+            (3,3) (3,4) (3,5) (3,6) (3,7) (3,8) 
+"""
+
+
+[[layer]]
+name = "BaseLayer" #optional name for the layer
+keys = """
+Tab Q W E R T Y U I O P Backspace
+Escape A S D F G H J K L ; /
+LShift Z X C V B N M Comma Dot Enter
+    LGui LCtrl Space Enter Backspace Delete
+"""
 
 [ble]
 enabled = true
 
 [behavior]
-tap_hold = { enable_hrm = true }
+tap_hold = { enable_hrm = true, prior_idle_time = "100ms", hold_timeout = "200ms", post_wait_time = "25ms" }
 
 [split]
 connection = "ble"
+
+[storage]
+enabled = true
+clear_storage = true
 
 [split.central]
 rows = 4
 cols = 6
 row_offset = 0
 col_offset = 0
+ble_addr = [0x18, 0xe2, 0x21, 0x80, 0xc0, 0xc7]
 [split.central.matrix]
-input_pins = ["P0_09", "P0_10", "P1_00", "P0_11"]
-output_pins = ["P1_06", "P1_04", "P1_02", "P0_28", "P0_02", "P0_03"]
+output_pins = ["P0_31", "P0_29", "P0_02", "P1_15", "P1_13", "P1_11"]
+input_pins = ["P0_22", "P0_24", "P1_00", "P0_11"]
 
 [[split.peripheral]]
 rows = 4
 cols = 6
 row_offset = 0
 col_offset = 6
+ble_addr = [0x7e, 0xfe, 0x73, 0x9e, 0x66, 0xe3]
 [split.peripheral.matrix]
-input_pins = ["P0_09", "P0_10", "P1_00", "P0_11"]
-output_pins = ["P1_06", "P1_04", "P1_02", "P0_28", "P0_02", "P0_03"]
+input_pins = ["P0_22", "P0_24", "P1_00", "P0_11"]
+output_pins = ["P1_11", "P1_13", "P1_15", "P0_02", "P0_29", "P0_31"]
+
+# [[split.peripheral]]
+# rows = 2
+# cols = 1
+# row_offset = 2
+# col_offset = 2
+# serial = [{ instance = "UART0", tx_pin = "PIN_0", rx_pin = "PIN_1" }]
+# input_pins = ["PIN_9", "PIN_11"]
+# output_pins = ["PIN_10"]
