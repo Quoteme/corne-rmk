@@ -12,6 +12,7 @@ license = "MIT OR Apache-2.0"
 [dependencies]
 rmk = { version = "0.7", features = [
     "nrf52840_ble",
+    "async_matrix",
     "split",
     "async_matrix",
     "adafruit_bl",
