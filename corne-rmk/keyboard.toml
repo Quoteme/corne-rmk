@@ -11,7 +11,7 @@ chip = "nrf52840"
 # row2col = true
 rows = 4
 cols = 12
-layers = 1
+layers = 3
 matrix_map = """
 (0,0) (0,1) (0,2) (0,3) (0,4) (0,5) (0,6) (0,7) (0,8) (0,9) (0,10) (0,11)
 (1,0) (1,1) (1,2) (1,3) (1,4) (1,5) (1,6) (1,7) (1,8) (1,9) (1,10) (1,11)
@@ -23,11 +23,30 @@ matrix_map = """
 [[layer]]
 name = "BaseLayer" #optional name for the layer
 keys = """
-Tab Q W E R T Y U I O P Backspace
-Escape A S D F G H J K L ; /
-LShift Z X C V B N M Comma Dot Enter
-    LGui LCtrl Space Enter Backspace Delete
+Tab          Q    W                E     R     T                        Y U I     O P Backspace
+Escape       A    S                D     F     G                        H J K     L ; '
+LShift       Z    X                C     V     B                        N M Comma . / LAlt
+             LGui LT(LowerLayer,/) Space Enter LT(UpperLayer,Backspace) LCtrl
 """
+
+[[layer]]
+name = "LowerLayer" #optional name for the layer
+keys = """
+Tab          1    2 3     4     5 6    7    8  9     0 Backspace
+_            _    _ _     _     _ Left Down Up Right _
+_            _    _ _     _     _ _    _    _  _     _ _
+             LGui _ Space Enter _ RAlt
+"""
+
+[[layer]]
+name = "UpperLayer" #optional name for the layer
+keys = """
+Tab       1    2 3     4     5 6 7 8 9 0 Backspace
+_         _    _ _     _     _ _ _ _ _ _ _
+_         _    _ _     _     _ _ _ _ _ _ _
+          LGui _ Space Enter _ RAlt
+"""
+
 
 [ble]
 enabled = true
