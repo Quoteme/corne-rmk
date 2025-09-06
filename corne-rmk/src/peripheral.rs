@@ -12,6 +12,7 @@ use embassy_nrf::mode::Async;
 use embassy_nrf::peripherals::{RNG, SAADC, USBD};
 use embassy_nrf::saadc::{self, AnyInput, Input as _, Saadc};
 use embassy_nrf::{bind_interrupts, rng, usb, Peri};
+use embassy_time::Duration;
 use nrf_mpsl::Flash;
 use nrf_sdc::mpsl::MultiprotocolServiceLayer;
 use nrf_sdc::{self as sdc, mpsl};
@@ -22,6 +23,9 @@ use rmk::channel::EVENT_CHANNEL;
 use rmk::config::StorageConfig;
 use rmk::debounce::default_debouncer::DefaultDebouncer;
 use rmk::futures::future::join;
+use rmk::input_device::adc::{AnalogEventType, NrfAdc};
+use rmk::input_device::battery::BatteryProcessor;
+use rmk::input_device::joystick::JoystickProcessor;
 use rmk::matrix::Matrix;
 use rmk::split::peripheral::run_rmk_split_peripheral;
 use rmk::storage::new_storage_for_split_peripheral;
@@ -69,16 +73,6 @@ fn build_sdc<'d, const N: usize>(
         .peripheral_count(1)?
         .buffer_cfg(L2CAP_MTU as u16, L2CAP_MTU as u16, L2CAP_TXQ, L2CAP_RXQ)?
         .build(p, rng, mpsl, mem)
-}
-
-/// Initializes the SAADC peripheral in single-ended mode on the given pin.
-fn init_adc(adc_pin: AnyInput, adc: Peri<'static, SAADC>) -> Saadc<'static, 1> {
-    // Then we initialize the ADC. We are only using one channel in this example.
-    let config = saadc::Config::default();
-    let channel_cfg = saadc::ChannelConfig::single_ended(adc_pin.degrade_saadc());
-    interrupt::SAADC.set_priority(interrupt::Priority::P3);
-    let saadc = saadc::Saadc::new(adc, Irqs, config, [channel_cfg]);
-    saadc
 }
 
 fn ble_addr() -> [u8; 6] {
@@ -129,10 +123,27 @@ async fn main(spawner: Spawner) {
     let stack = build_ble_stack(sdc, ble_addr(), &mut rng_generator, &mut resources).await;
 
     // Initialize the ADC. We are only using one channel for detecting battery level
-    let adc_pin = p.P0_05.degrade_saadc();
-    let saadc = init_adc(adc_pin, p.SAADC);
-    // Wait for ADC calibration.
+    let saadc_config = saadc::Config::default();
+    let saadc = saadc::Saadc::new(
+        p.SAADC,
+        Irqs,
+        saadc_config,
+        [
+            saadc::ChannelConfig::single_ended(saadc::VddhDiv5Input.degrade_saadc()),
+            saadc::ChannelConfig::single_ended(p.P0_31.degrade_saadc()),
+            saadc::ChannelConfig::single_ended(p.P0_29.degrade_saadc()),
+        ],
+    );
+    interrupt::SAADC.set_priority(interrupt::Priority::P3);
     saadc.calibrate().await;
+    let mut adc_dev = NrfAdc::new(
+        saadc,
+        [AnalogEventType::Battery, AnalogEventType::Joystick(2)],
+        Duration::from_ticks(20),        /* polling interval */
+        Some(Duration::from_ticks(300)), /* light sleep interval */
+    );
+    let mut batt_proc = BatteryProcessor::new(1, 5, &keymap);
+    let mut joy_proc = JoystickProcessor::new([[80, 0], [0, 80]], [29130, 29365], 6, &keymap);
 
     let (input_pins, output_pins) = config_matrix_pins_nrf!(
         peripherals: p,
