@@ -138,7 +138,7 @@ async fn main(spawner: Spawner) {
     let (input_pins, output_pins) = config_matrix_pins_nrf!(
         peripherals: p,
         input: [P0_22, P0_24, P1_00, P0_11],
-        output: [P1_11, P1_13, P1_15, P0_02, P0_29, P0_31]
+        output: [P1_11, P1_13, P1_15, P1_01, P1_02, P1_07]
     );
     const INPUT_PIN_NUM: usize = 4;
     const OUTPUT_PIN_NUM: usize = 6;
