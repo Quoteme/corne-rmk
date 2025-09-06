@@ -1,0 +1,114 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Scroll Speed Tracker</title>
+    <style type="text/css">
+      body {
+        font-family: Arial, sans-serif;
+        text-align: center;
+        height: 200vh; /* Make the page scrollable */
+        padding-top: 50px;
+      }
+
+      #speed-container {
+        position: fixed;
+        top: 50%;
+        left: 50%;
+        transform: translate(-50%, -50%);
+        font-size: 5rem;
+        color: #333;
+        background-color: rgba(255, 255, 255, 0.8);
+        padding: 20px;
+        border-radius: 10px;
+        box-shadow: 0 4px 8px rgba(0, 0, 0, 0.2);
+        z-index: 1000;
+      }
+
+      #vertical-speed,
+      #horizontal-speed {
+        font-weight: bold;
+        display: block;
+        margin: 10px 0;
+      }
+
+      .label {
+        font-size: 1.5rem;
+        color: #666;
+        margin-bottom: 5px;
+      }
+
+      p {
+        font-size: 1.2rem;
+        color: #888;
+      }
+    </style>
+  </head>
+  <body>
+    <div id="speed-container">
+      <div class="label">Vertical Speed:</div>
+      <div id="vertical-speed">0</div>
+      <div class="label">Horizontal Speed:</div>
+      <div id="horizontal-speed">0</div>
+    </div>
+
+    <h1>Scroll to see the speed!</h1>
+    <p>
+      Scroll up and down, or left and right (if your mouse supports it) to see
+      the values change.
+    </p>
+
+    <script>
+      // Store previous scroll data and speed
+      let lastScrollTime = 0;
+      let lastVerticalDelta = 0;
+      let lastHorizontalDelta = 0;
+
+      // Get the HTML elements to display the speed
+      const verticalSpeedEl = document.getElementById("vertical-speed");
+      const horizontalSpeedEl = document.getElementById("horizontal-speed");
+
+      // Main event handler for mouse wheel
+      window.addEventListener(
+        "wheel",
+        (event) => {
+          const currentTime = Date.now();
+          const timeElapsed = currentTime - lastScrollTime;
+
+          if (timeElapsed > 0) {
+            // Get the current delta values
+            const currentVerticalDelta = event.deltaY;
+            const currentHorizontalDelta = event.deltaX;
+
+            // Calculate the speed (pixels per second)
+            const verticalSpeed = Math.abs(
+              (currentVerticalDelta / timeElapsed) * 1000,
+            ).toFixed(2);
+            const horizontalSpeed = Math.abs(
+              (currentHorizontalDelta / timeElapsed) * 1000,
+            ).toFixed(2);
+
+            // Update the display
+            verticalSpeedEl.textContent = verticalSpeed;
+            horizontalSpeedEl.textContent = horizontalSpeed;
+          }
+
+          // Update variables for the next event
+          lastScrollTime = currentTime;
+        },
+        { passive: true },
+      );
+
+      // Reset speed to 0 after a brief pause
+      let resetTimer;
+      window.addEventListener("wheel", () => {
+        clearTimeout(resetTimer);
+        resetTimer = setTimeout(() => {
+          verticalSpeedEl.textContent = "0.00";
+          horizontalSpeedEl.textContent = "0.00";
+        }, 150); // Adjust this delay to your liking
+      });
+    </script>
+  </body>
+</html>

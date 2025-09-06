@@ -4,6 +4,7 @@
 mod vial;
 #[macro_use]
 mod macros;
+mod joystick;
 mod keymap;
 
 use crate::keymap::{COL, COL_OFFSET, NUM_ENCODER, NUM_LAYER, ROW};
@@ -17,6 +18,7 @@ use embassy_nrf::saadc::{self, AnyInput, Input as _, Saadc};
 use embassy_nrf::usb::vbus_detect::HardwareVbusDetect;
 use embassy_nrf::usb::Driver;
 use embassy_nrf::{bind_interrupts, rng, usb, Peri};
+use embassy_time::Duration;
 use nrf_mpsl::Flash;
 use nrf_sdc::mpsl::MultiprotocolServiceLayer;
 use nrf_sdc::{self as sdc, mpsl};
@@ -31,6 +33,7 @@ use rmk::debounce::default_debouncer::DefaultDebouncer;
 use rmk::futures::future::{join, join4};
 use rmk::input_device::adc::{AnalogEventType, NrfAdc};
 use rmk::input_device::battery::BatteryProcessor;
+use rmk::input_device::joystick::JoystickProcessor;
 use rmk::input_device::rotary_encoder::RotaryEncoder;
 use rmk::input_device::Runnable;
 use rmk::keyboard::Keyboard;
@@ -90,16 +93,6 @@ fn build_sdc<'d, const N: usize>(
         .peripheral_count(1)?
         .buffer_cfg(L2CAP_MTU as u16, L2CAP_MTU as u16, L2CAP_TXQ, L2CAP_RXQ)?
         .build(p, rng, mpsl, mem)
-}
-
-/// Initializes the SAADC peripheral in single-ended mode on the given pin.
-fn init_adc(adc_pin: AnyInput, adc: Peri<'static, SAADC>) -> Saadc<'static, 1> {
-    // Then we initialize the ADC. We are only using one channel in this example.
-    let config = saadc::Config::default();
-    let channel_cfg = saadc::ChannelConfig::single_ended(adc_pin.degrade_saadc());
-    interrupt::SAADC.set_priority(interrupt::Priority::P3);
-    let saadc = saadc::Saadc::new(adc, Irqs, config, [channel_cfg]);
-    saadc
 }
 
 fn ble_addr() -> [u8; 6] {
@@ -164,9 +157,18 @@ async fn main(spawner: Spawner) {
     const OUTPUT_PIN_NUM: usize = 6;
     // Initialize the ADC.
     // We are only using one channel for detecting battery level
-    let adc_pin = p.P0_05.degrade_saadc();
-    let is_charging_pin = Input::new(p.P0_07, embassy_nrf::gpio::Pull::Up);
-    let saadc = init_adc(adc_pin, p.SAADC);
+    let saadc_config = saadc::Config::default();
+    let saadc = saadc::Saadc::new(
+        p.SAADC,
+        Irqs,
+        saadc_config,
+        [
+            saadc::ChannelConfig::single_ended(saadc::VddhDiv5Input.degrade_saadc()),
+            saadc::ChannelConfig::single_ended(p.P0_31.degrade_saadc()),
+            saadc::ChannelConfig::single_ended(p.P0_29.degrade_saadc()),
+        ],
+    );
+    interrupt::SAADC.set_priority(interrupt::Priority::P3);
     // Wait for ADC calibration.
     saadc.calibrate().await;
 
@@ -179,7 +181,7 @@ async fn main(spawner: Spawner) {
         serial_number: "vial:f64c2b3c:000001",
     };
     let vial_config = VialConfig::new(VIAL_KEYBOARD_ID, VIAL_KEYBOARD_DEF);
-    let ble_battery_config = BleBatteryConfig::new(Some(is_charging_pin), true, None, false);
+    let ble_battery_config = BleBatteryConfig::new(None, true, None, false);
     let storage_config = StorageConfig {
         start_addr: 0xA0000,
         num_sectors: 6,
@@ -194,7 +196,7 @@ async fn main(spawner: Spawner) {
         ..Default::default()
     };
 
-    // Initialze keyboard stuffs
+    // Initialize keyboard stuff
     // Initialize the storage and keymap
     let mut default_keymap = keymap::get_default_keymap();
     let mut behavior_config = BehaviorConfig::default();
@@ -209,11 +211,7 @@ async fn main(spawner: Spawner) {
     )
     .await;
 
-    let pin_a = Input::new(p.P1_06, embassy_nrf::gpio::Pull::None);
-    let pin_b = Input::new(p.P1_04, embassy_nrf::gpio::Pull::None);
-    let mut encoder = RotaryEncoder::with_resolution(pin_a, pin_b, 4, true, 0);
-
-    // Initialize the matrix and keyboard
+    // Initialize the matrix and keyb oard
     let debouncer = DefaultDebouncer::<4, 7>::new();
     let mut matrix = CentralMatrix::<_, _, _, 0, 0, INPUT_PIN_NUM, OUTPUT_PIN_NUM>::new(
         input_pins,
@@ -222,18 +220,25 @@ async fn main(spawner: Spawner) {
     );
     let mut keyboard = Keyboard::new(&keymap);
 
-    // Read peripheral address from storage
+    // Read peripheral address from s torage
     let peripheral_addrs =
         read_peripheral_addresses::<1, _, ROW, COL, NUM_LAYER, NUM_ENCODER>(&mut storage).await;
 
-    // Initialize the encoder processor
+    // Initialize the encoder process or
     let mut adc_device = NrfAdc::new(
         saadc,
-        [AnalogEventType::Battery],
-        embassy_time::Duration::from_secs(12),
-        None,
+        [AnalogEventType::Battery, AnalogEventType::Joystick(2)],
+        Duration::from_ticks(20),
+        Some(Duration::from_ticks(300)),
     );
     let mut batt_proc = BatteryProcessor::new(2000, 2806, &keymap);
+    let mut joy_proc = joystick::JoystickProcessor::new(
+        [[10, 0], [0, 10]],
+        [50, 50],
+        6,
+        &keymap,
+        joystick::KeyboardSide::Left,
+    );
 
     // Initialize the controllers
     let mut light_controller: LightController<Output> =
@@ -246,10 +251,10 @@ async fn main(spawner: Spawner) {
     // Start
     join4(
         run_devices! (
-            (matrix, encoder, adc_device) => EVENT_CHANNEL,
+            (matrix, adc_device) => EVENT_CHANNEL,
         ),
         run_processor_chain! {
-            EVENT_CHANNEL => [batt_proc],
+            EVENT_CHANNEL => [joy_proc, batt_proc],
         },
         keyboard.run(),
         join(

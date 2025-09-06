@@ -1,6 +1,9 @@
 #![no_std]
 #![no_main]
 
+mod joystick;
+mod keymap;
+
 #[macro_use]
 mod macros;
 
@@ -20,16 +23,15 @@ use rand_chacha::ChaCha12Rng;
 use rand_core::SeedableRng;
 use rmk::ble::trouble::build_ble_stack;
 use rmk::channel::EVENT_CHANNEL;
-use rmk::config::StorageConfig;
+use rmk::config::{BehaviorConfig, StorageConfig};
 use rmk::debounce::default_debouncer::DefaultDebouncer;
-use rmk::futures::future::join;
+use rmk::futures::future::join3;
 use rmk::input_device::adc::{AnalogEventType, NrfAdc};
 use rmk::input_device::battery::BatteryProcessor;
-use rmk::input_device::joystick::JoystickProcessor;
 use rmk::matrix::Matrix;
 use rmk::split::peripheral::run_rmk_split_peripheral;
 use rmk::storage::new_storage_for_split_peripheral;
-use rmk::{run_devices, HostResources};
+use rmk::{initialize_keymap, run_devices, run_processor_chain, HostResources};
 use static_cell::StaticCell;
 use {defmt_rtt as _, panic_probe as _};
 
@@ -142,8 +144,19 @@ async fn main(spawner: Spawner) {
         Duration::from_ticks(20),        /* polling interval */
         Some(Duration::from_ticks(300)), /* light sleep interval */
     );
+    let mut default_keymap = keymap::get_default_keymap();
+    let mut behavior_config = BehaviorConfig::default();
+    behavior_config.tap_hold.enable_hrm = true;
+    let mut encoder_map = keymap::get_default_encoder_map();
+    let keymap = initialize_keymap(&mut default_keymap, behavior_config).await;
     let mut batt_proc = BatteryProcessor::new(1, 5, &keymap);
-    let mut joy_proc = JoystickProcessor::new([[80, 0], [0, 80]], [29130, 29365], 6, &keymap);
+    let mut joy_proc = joystick::JoystickProcessor::new(
+        [[1000, 0], [0, 1000]],
+        [-8200, 0],
+        6,
+        &keymap,
+        joystick::KeyboardSide::Right,
+    );
 
     let (input_pins, output_pins) = config_matrix_pins_nrf!(
         peripherals: p,
@@ -171,10 +184,13 @@ async fn main(spawner: Spawner) {
         Matrix::<_, _, _, INPUT_PIN_NUM, OUTPUT_PIN_NUM>::new(input_pins, output_pins, debouncer);
     // let mut matrix = rmk::matrix::TestMatrix::<4, 7>::new();
 
-    join(
+    join3(
         run_devices! (
-            (matrix) => EVENT_CHANNEL, // Peripheral uses EVENT_CHANNEL to send events to central
+            (matrix, adc_dev) => EVENT_CHANNEL, // Peripheral uses EVENT_CHANNEL to send events to central
         ),
+        run_processor_chain! {
+            EVENT_CHANNEL => [joy_proc, batt_proc],
+        },
         run_rmk_split_peripheral(0, &stack, &mut storage),
     )
     .await;
