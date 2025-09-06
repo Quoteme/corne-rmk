@@ -22,7 +22,6 @@ use rmk::channel::EVENT_CHANNEL;
 use rmk::config::StorageConfig;
 use rmk::debounce::default_debouncer::DefaultDebouncer;
 use rmk::futures::future::join;
-use rmk::input_device::rotary_encoder::RotaryEncoder;
 use rmk::matrix::Matrix;
 use rmk::split::peripheral::run_rmk_split_peripheral;
 use rmk::storage::new_storage_for_split_peripheral;
@@ -138,6 +137,7 @@ async fn main(spawner: Spawner) {
     let (input_pins, output_pins) = config_matrix_pins_nrf!(
         peripherals: p,
         input: [P0_22, P0_24, P1_00, P0_11],
+        // [P1_11, P1_13, P1_15, P0_02, P0_29, P0_31]
         output: [P1_11, P1_13, P1_15, P1_01, P1_02, P1_07]
     );
     const INPUT_PIN_NUM: usize = 4;
@@ -160,14 +160,9 @@ async fn main(spawner: Spawner) {
         Matrix::<_, _, _, INPUT_PIN_NUM, OUTPUT_PIN_NUM>::new(input_pins, output_pins, debouncer);
     // let mut matrix = rmk::matrix::TestMatrix::<4, 7>::new();
 
-    let pin_a = Input::new(p.P1_06, embassy_nrf::gpio::Pull::None);
-    let pin_b = Input::new(p.P1_04, embassy_nrf::gpio::Pull::None);
-    let mut encoder = RotaryEncoder::with_resolution(pin_a, pin_b, 4, true, 1);
-
-    // Start
     join(
         run_devices! (
-            (matrix, encoder) => EVENT_CHANNEL, // Peripheral uses EVENT_CHANNEL to send events to central
+            (matrix) => EVENT_CHANNEL, // Peripheral uses EVENT_CHANNEL to send events to central
         ),
         run_rmk_split_peripheral(0, &stack, &mut storage),
     )
