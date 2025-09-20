@@ -1,6 +1,9 @@
 #![no_std]
 #![no_main]
 
+mod joystick;
+mod keymap;
+
 #[macro_use]
 mod macros;
 
@@ -12,6 +15,7 @@ use embassy_nrf::mode::Async;
 use embassy_nrf::peripherals::{RNG, SAADC, USBD};
 use embassy_nrf::saadc::{self, AnyInput, Input as _, Saadc};
 use embassy_nrf::{bind_interrupts, rng, usb, Peri};
+use embassy_time::Duration;
 use nrf_mpsl::Flash;
 use nrf_sdc::mpsl::MultiprotocolServiceLayer;
 use nrf_sdc::{self as sdc, mpsl};
@@ -19,14 +23,15 @@ use rand_chacha::ChaCha12Rng;
 use rand_core::SeedableRng;
 use rmk::ble::trouble::build_ble_stack;
 use rmk::channel::EVENT_CHANNEL;
-use rmk::config::StorageConfig;
+use rmk::config::{BehaviorConfig, StorageConfig};
 use rmk::debounce::default_debouncer::DefaultDebouncer;
-use rmk::futures::future::join;
-use rmk::input_device::rotary_encoder::RotaryEncoder;
+use rmk::futures::future::join3;
+use rmk::input_device::adc::{AnalogEventType, NrfAdc};
+use rmk::input_device::battery::BatteryProcessor;
 use rmk::matrix::Matrix;
 use rmk::split::peripheral::run_rmk_split_peripheral;
 use rmk::storage::new_storage_for_split_peripheral;
-use rmk::{run_devices, HostResources};
+use rmk::{initialize_keymap, run_devices, run_processor_chain, HostResources};
 use static_cell::StaticCell;
 use {defmt_rtt as _, panic_probe as _};
 
@@ -70,16 +75,6 @@ fn build_sdc<'d, const N: usize>(
         .peripheral_count(1)?
         .buffer_cfg(L2CAP_MTU as u16, L2CAP_MTU as u16, L2CAP_TXQ, L2CAP_RXQ)?
         .build(p, rng, mpsl, mem)
-}
-
-/// Initializes the SAADC peripheral in single-ended mode on the given pin.
-fn init_adc(adc_pin: AnyInput, adc: Peri<'static, SAADC>) -> Saadc<'static, 1> {
-    // Then we initialize the ADC. We are only using one channel in this example.
-    let config = saadc::Config::default();
-    let channel_cfg = saadc::ChannelConfig::single_ended(adc_pin.degrade_saadc());
-    interrupt::SAADC.set_priority(interrupt::Priority::P3);
-    let saadc = saadc::Saadc::new(adc, Irqs, config, [channel_cfg]);
-    saadc
 }
 
 fn ble_addr() -> [u8; 6] {
@@ -130,15 +125,44 @@ async fn main(spawner: Spawner) {
     let stack = build_ble_stack(sdc, ble_addr(), &mut rng_generator, &mut resources).await;
 
     // Initialize the ADC. We are only using one channel for detecting battery level
-    let adc_pin = p.P0_05.degrade_saadc();
-    let saadc = init_adc(adc_pin, p.SAADC);
-    // Wait for ADC calibration.
+    let saadc_config = saadc::Config::default();
+    let saadc = saadc::Saadc::new(
+        p.SAADC,
+        Irqs,
+        saadc_config,
+        [
+            saadc::ChannelConfig::single_ended(saadc::VddhDiv5Input.degrade_saadc()),
+            saadc::ChannelConfig::single_ended(p.P0_31.degrade_saadc()),
+            saadc::ChannelConfig::single_ended(p.P0_29.degrade_saadc()),
+        ],
+    );
+    interrupt::SAADC.set_priority(interrupt::Priority::P3);
     saadc.calibrate().await;
+    let mut adc_dev = NrfAdc::new(
+        saadc,
+        [AnalogEventType::Battery, AnalogEventType::Joystick(2)],
+        Duration::from_ticks(20),        /* polling interval */
+        Some(Duration::from_ticks(300)), /* light sleep interval */
+    );
+    let mut default_keymap = keymap::get_default_keymap();
+    let mut behavior_config = BehaviorConfig::default();
+    behavior_config.tap_hold.enable_hrm = true;
+    let mut encoder_map = keymap::get_default_encoder_map();
+    let keymap = initialize_keymap(&mut default_keymap, behavior_config).await;
+    let mut batt_proc = BatteryProcessor::new(1, 5, &keymap);
+    let mut joy_proc = joystick::JoystickProcessor::new(
+        [[1000, 0], [0, 1000]],
+        [-8200, 0],
+        6,
+        &keymap,
+        joystick::KeyboardSide::Right,
+    );
 
     let (input_pins, output_pins) = config_matrix_pins_nrf!(
         peripherals: p,
         input: [P0_22, P0_24, P1_00, P0_11],
-        output: [P1_11, P1_13, P1_15, P0_02, P0_29, P0_31]
+        // [P1_11, P1_13, P1_15, P0_02, P0_29, P0_31]
+        output: [P1_11, P1_13, P1_15, P1_01, P1_02, P1_07]
     );
     const INPUT_PIN_NUM: usize = 4;
     const OUTPUT_PIN_NUM: usize = 6;
@@ -160,15 +184,13 @@ async fn main(spawner: Spawner) {
         Matrix::<_, _, _, INPUT_PIN_NUM, OUTPUT_PIN_NUM>::new(input_pins, output_pins, debouncer);
     // let mut matrix = rmk::matrix::TestMatrix::<4, 7>::new();
 
-    let pin_a = Input::new(p.P1_06, embassy_nrf::gpio::Pull::None);
-    let pin_b = Input::new(p.P1_04, embassy_nrf::gpio::Pull::None);
-    let mut encoder = RotaryEncoder::with_resolution(pin_a, pin_b, 4, true, 1);
-
-    // Start
-    join(
+    join3(
         run_devices! (
-            (matrix, encoder) => EVENT_CHANNEL, // Peripheral uses EVENT_CHANNEL to send events to central
+            (matrix, adc_dev) => EVENT_CHANNEL, // Peripheral uses EVENT_CHANNEL to send events to central
         ),
+        run_processor_chain! {
+            EVENT_CHANNEL => [joy_proc, batt_proc],
+        },
         run_rmk_split_peripheral(0, &stack, &mut storage),
     )
     .await;
