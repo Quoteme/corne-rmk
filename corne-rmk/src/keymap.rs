@@ -14,8 +14,8 @@ const DOLLAR: KeyAction = shifted!(Kc4);
 
 const PERCENTAGE: KeyAction = shifted!(Kc5);
 
-const OPEN_BRACE: KeyAction = shifted!(Kc8);
-const CLOSE_BRACE: KeyAction = shifted!(Kc9);
+const OPEN_BRACE: KeyAction = shifted!(Kc9);
+const CLOSE_BRACE: KeyAction = shifted!(Kc0);
 const OPEN_CURLY_BRACE: KeyAction = shifted!(LeftBracket);
 const CLOSE_CURLY_BRACE: KeyAction = shifted!(RightBracket);
 const UNDERLINE: KeyAction = shifted!(Minus);
@@ -45,14 +45,14 @@ pub const fn get_default_keymap() -> [[[KeyAction; COL]; ROW]; NUM_LAYER] {
         [
             [k!(Tab),            k!(Kc1),     k!(Kc2),          k!(Kc3),           k!(Kc4),          k!(Kc5),         k!(Kc6),  k!(Kc7),          k!(Kc8),   k!(Kc9),   k!(Kc0), k!(Backspace)],
             [k!(BrightnessUp),   OPEN_BRACE,  k!(No),           DOLLAR,            k!(Backslash),    PERCENTAGE,      k!(Left), k!(Down),         k!(Up),    k!(Right), k!(No),  k!(No)],
-            [k!(BrightnessDown), CLOSE_BRACE, OPEN_CURLY_BRACE, CLOSE_CURLY_BRACE, k!(RightBracket), k!(LeftBracket), k!(No),   k!(No),           k!(No),    k!(No),    k!(No),  k!(No)],
+            [k!(BrightnessDown), CLOSE_BRACE, OPEN_CURLY_BRACE, CLOSE_CURLY_BRACE, k!(LeftBracket), k!(RightBracket), k!(No),   k!(No),           k!(No),    k!(No),    k!(No),  k!(No)],
             [k!(No),             k!(No),      k!(No),           k!(LGui),          TRAN,             k!(Space),       TRAN,     lt!(2,Backspace), k!(LCtrl), k!(No),    k!(No),  k!(No)]
         ],
         [
-            [k!(No), k!(No), k!(No), k!(No),     k!(No),     k!(No),    CARET,      AMPERSAND, ASTERISK,    k!(No), k!(No), k!(No)],
-            [k!(No), k!(No), k!(No), k!(No),     k!(No),     k!(No),    k!(Minus),      PLUS, k!(Grave),    PIPE, k!(No), k!(No)],
-            [k!(No), k!(No), k!(No), k!(No),     k!(Escape), k!(Tab),   UNDERLINE,      k!(Equal), TILDE,    HASHTAG, k!(No), k!(No)],
-            [k!(No), k!(No), k!(No), k!(LShift), TRAN,       k!(Space), ENTER_SHIFT, TRAN,   k!(LCtrl), k!(No), k!(No), k!(No)]
+            [k!(No), k!(No), k!(No), k!(No),     k!(No),     k!(No),      CARET,       AMPERSAND, ASTERISK,  k!(No),  k!(No), k!(No)],
+            [k!(No), k!(No), k!(No), k!(No),     OPEN_BRACE, CLOSE_BRACE, k!(Minus),   PLUS,      k!(Grave), PIPE,    k!(No), k!(No)],
+            [k!(No), k!(No), k!(No), k!(No),     k!(Escape), k!(Tab),     UNDERLINE,   k!(Equal), TILDE,     HASHTAG, k!(No), k!(No)],
+            [k!(No), k!(No), k!(No), k!(LShift), TRAN,       k!(Space),   ENTER_SHIFT, TRAN,      k!(LCtrl), k!(No),  k!(No), k!(No)]
         ]
     ]
 }
