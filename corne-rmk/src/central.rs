@@ -238,6 +238,14 @@ async fn main(spawner: Spawner) {
         Some(Duration::from_ticks(300)),
     );
     let mut batt_proc = BatteryProcessor::new(2000, 2806, &keymap);
+    // left is [-259XX, -295XX]
+    // right is [-311XX, -295XX]
+    // up is [-288XX, -320XX]
+    // down is [-288XX, -269XX]
+    // neutral is [-282XX, -293XX]
+    // the last to digits are useless
+    // thre third last digit is unreliable
+    // the leading two digigs are reliable
     let mut joy_proc = joystick::JoystickProcessor::new(
         [[10, 0], [0, 10]],
         [50, 50],
