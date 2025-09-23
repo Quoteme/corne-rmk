@@ -23,6 +23,7 @@ use rand_chacha::ChaCha12Rng;
 use rand_core::SeedableRng;
 use rmk::ble::trouble::build_ble_stack;
 use rmk::channel::EVENT_CHANNEL;
+use rmk::config::macro_config::KeyboardMacrosConfig;
 use rmk::config::{BehaviorConfig, StorageConfig};
 use rmk::debounce::default_debouncer::DefaultDebouncer;
 use rmk::futures::future::join3;
@@ -145,8 +146,13 @@ async fn main(spawner: Spawner) {
         Some(Duration::from_ticks(300)), /* light sleep interval */
     );
     let mut default_keymap = keymap::get_default_keymap();
-    let mut behavior_config = BehaviorConfig::default();
-    behavior_config.tap_hold.enable_hrm = true;
+    let mut behavior_config = BehaviorConfig {
+        tri_layer: Some([1, 2, 3]),
+        keyboard_macros: KeyboardMacrosConfig {
+            macro_sequences: keymap::get_macro_sequences(),
+        },
+        ..BehaviorConfig::default()
+    };
     let mut encoder_map = keymap::get_default_encoder_map();
     let keymap = initialize_keymap(&mut default_keymap, behavior_config).await;
     let mut batt_proc = BatteryProcessor::new(1, 5, &keymap);

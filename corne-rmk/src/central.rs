@@ -26,6 +26,7 @@ use rand_chacha::ChaCha12Rng;
 use rand_core::SeedableRng;
 use rmk::ble::trouble::build_ble_stack;
 use rmk::channel::EVENT_CHANNEL;
+use rmk::config::macro_config::KeyboardMacrosConfig;
 use rmk::config::{
     BehaviorConfig, BleBatteryConfig, KeyboardUsbConfig, RmkConfig, StorageConfig, VialConfig,
 };
@@ -199,8 +200,13 @@ async fn main(spawner: Spawner) {
     // Initialize keyboard stuff
     // Initialize the storage and keymap
     let mut default_keymap = keymap::get_default_keymap();
-    let mut behavior_config = BehaviorConfig::default();
-    behavior_config.tap_hold.enable_hrm = true;
+    let mut behavior_config = BehaviorConfig {
+        tri_layer: Some([1, 2, 3]),
+        keyboard_macros: KeyboardMacrosConfig {
+            macro_sequences: keymap::get_macro_sequences(),
+        },
+        ..BehaviorConfig::default()
+    };
     let mut encoder_map = keymap::get_default_encoder_map();
     let (keymap, mut storage) = initialize_encoder_keymap_and_storage(
         &mut default_keymap,
