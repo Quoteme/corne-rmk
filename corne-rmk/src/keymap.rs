@@ -41,7 +41,7 @@ pub const fn get_default_keymap() -> [[[KeyAction; COL]; ROW]; NUM_LAYER] {
             [k!(Tab),    k!(Q),  k!(W),  k!(E),    k!(R),        k!(T),     k!(Y),       /* */ k!(U),            k!(I),     k!(O),   k!(P),         k!(Backspace)],
             [k!(Escape), k!(A),  k!(S),  k!(D),    k!(F),        k!(G),     k!(H),       /* */ k!(J),            k!(K),     k!(L),   k!(Semicolon), k!(Quote) ],
             [k!(LShift), k!(Z),  k!(X),  k!(C),    k!(V),        k!(B),     k!(N),       /* */ k!(M),            k!(Comma), k!(Dot), k!(Slash),     k!(LAlt)  ],
-            [k!(No),     k!(No), k!(No), k!(LGui), lt!(1,Slash), k!(Space), ENTER_SHIFT, /* */ lt!(2,Backspace), k!(LCtrl), k!(No),  k!(No),        k!(No)    ]
+            [k!(No),     k!(No), k!(No), k!(LGui), lt!(1,Space), k!(Slash), ENTER_SHIFT, /* */ lt!(2,Backspace), k!(LCtrl), k!(No),  k!(No),        k!(No)    ]
         ],
         [
             [k!(Tab),            k!(Kc1),     k!(Kc2),          k!(Kc3),           k!(Kc4),          k!(Kc5),         /* */ k!(Kc6),  k!(Kc7),          k!(Kc8),   k!(Kc9),   k!(Kc0), k!(Backspace)],
@@ -80,6 +80,7 @@ pub(crate) fn get_macro_sequences() -> [u8; MACRO_SPACE_SIZE] {
             MacroOperation::Press(KeyCode::LCtrl),
             MacroOperation::Tap(KeyCode::E),
             MacroOperation::Tap(KeyCode::Kc4),
+            MacroOperation::Tap(KeyCode::Enter),
         ])
         .expect("too many elements"),
         // ö
@@ -91,6 +92,7 @@ pub(crate) fn get_macro_sequences() -> [u8; MACRO_SPACE_SIZE] {
             MacroOperation::Press(KeyCode::LCtrl),
             MacroOperation::Tap(KeyCode::F),
             MacroOperation::Tap(KeyCode::Kc6),
+            MacroOperation::Tap(KeyCode::Enter),
         ])
         .expect("too many elements"),
         // ü
@@ -102,6 +104,7 @@ pub(crate) fn get_macro_sequences() -> [u8; MACRO_SPACE_SIZE] {
             MacroOperation::Press(KeyCode::LCtrl),
             MacroOperation::Tap(KeyCode::F),
             MacroOperation::Tap(KeyCode::C),
+            MacroOperation::Tap(KeyCode::Enter),
         ])
         .expect("too many elements"),
         // Ä
@@ -113,6 +116,7 @@ pub(crate) fn get_macro_sequences() -> [u8; MACRO_SPACE_SIZE] {
             MacroOperation::Press(KeyCode::LCtrl),
             MacroOperation::Tap(KeyCode::C),
             MacroOperation::Tap(KeyCode::Kc4),
+            MacroOperation::Tap(KeyCode::Enter),
         ])
         .expect("too many elements"),
         // Ö
@@ -124,6 +128,7 @@ pub(crate) fn get_macro_sequences() -> [u8; MACRO_SPACE_SIZE] {
             MacroOperation::Press(KeyCode::LCtrl),
             MacroOperation::Tap(KeyCode::D),
             MacroOperation::Tap(KeyCode::Kc6),
+            MacroOperation::Tap(KeyCode::Enter),
         ])
         .expect("too many elements"),
         // ü
@@ -135,6 +140,7 @@ pub(crate) fn get_macro_sequences() -> [u8; MACRO_SPACE_SIZE] {
             MacroOperation::Press(KeyCode::LCtrl),
             MacroOperation::Tap(KeyCode::D),
             MacroOperation::Tap(KeyCode::C),
+            MacroOperation::Tap(KeyCode::Enter),
         ])
         .expect("too many elements"),
         // ß
@@ -146,6 +152,7 @@ pub(crate) fn get_macro_sequences() -> [u8; MACRO_SPACE_SIZE] {
             MacroOperation::Press(KeyCode::LCtrl),
             MacroOperation::Tap(KeyCode::D),
             MacroOperation::Tap(KeyCode::F),
+            MacroOperation::Tap(KeyCode::Enter),
         ])
         .expect("too many elements"),
     ])
