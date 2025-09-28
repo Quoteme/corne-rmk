@@ -156,10 +156,11 @@ async fn main(spawner: Spawner) {
     let mut encoder_map = keymap::get_default_encoder_map();
     let keymap = initialize_keymap(&mut default_keymap, behavior_config).await;
     let mut batt_proc = BatteryProcessor::new(1, 5, &keymap);
+    let speed = 4.0;
     let mut joy_proc = joystick::JoystickProcessor::new(
-        [[1000, 0], [0, 1000]],
-        [-8200, 0],
-        6,
+        [[0.001 * speed, 0.0], [0.0, 0.001 * speed]],
+        [28600, 29555],
+        [0.4, 0.35],
         &keymap,
         joystick::KeyboardSide::Right,
     );

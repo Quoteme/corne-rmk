@@ -20,11 +20,11 @@ pub struct JoystickProcessor<
     const NUM_ENCODER: usize,
     const N: usize,
 > {
-    transform: [[i16; N]; N],
+    transform: [[f32; N]; N],
     bias: [i16; N],
+    threshold: [f32; N],
     keymap: &'a RefCell<KeyMap<'a, ROW, COL, NUM_LAYER, NUM_ENCODER>>,
     record: [i16; N],
-    resolution: u16,
     side: KeyboardSide,
 }
 
@@ -38,30 +38,39 @@ impl<
     > JoystickProcessor<'a, ROW, COL, NUM_LAYER, NUM_ENCODER, N>
 {
     pub fn new(
-        transform: [[i16; N]; N],
+        transform: [[f32; N]; N],
         bias: [i16; N],
-        resolution: u16,
+        threshold: [f32; N],
         keymap: &'a RefCell<KeyMap<'a, ROW, COL, NUM_LAYER, NUM_ENCODER>>,
         side: KeyboardSide,
     ) -> Self {
         Self {
             transform,
             bias,
-            resolution,
+            threshold,
             keymap,
             record: [0; N],
             side,
         }
     }
     async fn generate_report(&mut self) {
-        let mut report = [0i16; N];
-
-        // debug!(
-        //     "JoystickProcessor::generate_report: record = {:?}",
-        //     self.record
-        // );
         for (rec, b) in self.record.iter_mut().zip(self.bias.iter()) {
             *rec = rec.saturating_add(*b);
+        }
+        let mut result = [0i8; N];
+        for i in 0..N {
+            let mut sum = 0.0f32;
+            for j in 0..N {
+                sum += self.transform[i][j] * self.record[j] as f32;
+            }
+
+            sum = if sum.abs() < self.threshold[i] {
+                0.0
+            } else {
+                sum
+            };
+            // Cast back to i8 with saturation
+            result[i] = sum.clamp(-128.0, 127.0) as i8;
         }
 
         for (rep, transform) in report.iter_mut().zip(self.transform.iter()) {
@@ -77,18 +86,23 @@ impl<
 
         // debug!("JoystickProcessor::generate_report: report = {:?}", report);
         // map to mouse
-        let mouse_report = MouseReport {
-            buttons: 0,
-            x: 0,
-            y: 0,
-            // x: (report[0].clamp(i8::MIN as i16, i8::MAX as i16)) as i8,
-            // y: (report[1].clamp(i8::MIN as i16, i8::MAX as i16)) as i8,
-            // wheel: -128i8 / 16,
-            // pan: 0,
-            // wheel: (report[0].clamp(i8::MIN as i16, i8::MAX as i16)) as i8,
-            // pan: (report[1].clamp(i8::MIN as i16, i8::MAX as i16)) as i8,
-            wheel: 0,
-            pan: 0,
+        let mouse_report = match self.side {
+            KeyboardSide::Left => MouseReport {
+                buttons: 0,
+                x: result[0],
+                y: result[1],
+                wheel: 0,
+                pan: 0,
+            },
+            KeyboardSide::Right => MouseReport {
+                buttons: 0,
+                x: 0,
+                y: 0,
+                // wheel: result[0],
+                // pan: result[1],
+                wheel: 0,
+                pan: 0,
+            },
         };
         self.send_report(Report::MouseReport(mouse_report)).await;
     }

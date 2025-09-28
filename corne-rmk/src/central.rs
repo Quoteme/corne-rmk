@@ -246,10 +246,14 @@ async fn main(spawner: Spawner) {
     // the last to digits are useless
     // thre third last digit is unreliable
     // the leading two digigs are reliable
+    // up - down =  [0, -5900]
+    // left - right = [-5200, 0]
+    // =====> bias = -[-5200, -5900]
+    let speed = 4.0;
     let mut joy_proc = joystick::JoystickProcessor::new(
-        [[10, 0], [0, 10]],
-        [50, 50],
-        6,
+        [[-0.001 * speed, 0.0], [0.0, 0.001 * speed]],
+        [28600, 29555],
+        [0.4, 0.15],
         &keymap,
         joystick::KeyboardSide::Left,
     );
