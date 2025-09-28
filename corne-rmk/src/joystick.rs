@@ -73,18 +73,6 @@ impl<
             result[i] = sum.clamp(-128.0, 127.0) as i8;
         }
 
-        for (rep, transform) in report.iter_mut().zip(self.transform.iter()) {
-            for (w, v) in transform.iter().zip(self.record) {
-                if *w == 0 {
-                    // ignore zero weight
-                    continue;
-                }
-                *rep = rep.saturating_add(v.saturating_div(*w));
-                *rep = *rep - *rep % self.resolution as i16;
-            }
-        }
-
-        // debug!("JoystickProcessor::generate_report: report = {:?}", report);
         // map to mouse
         let mouse_report = match self.side {
             KeyboardSide::Left => MouseReport {
