@@ -7,6 +7,7 @@ use rmk::input_device::{InputProcessor, ProcessResult};
 use rmk::keymap::KeyMap;
 use usbd_hid::descriptor::MouseReport;
 
+#[allow(dead_code)]
 pub enum KeyboardSide {
     Left,
     Right,
@@ -86,10 +87,10 @@ impl<
                 buttons: 0,
                 x: 0,
                 y: 0,
-                // wheel: result[0],
-                // pan: result[1],
-                wheel: 0,
-                pan: 0,
+                wheel: result[0],
+                pan: result[1],
+                // wheel: 0,
+                // pan: 0,
             },
         };
         self.send_report(Report::MouseReport(mouse_report)).await;
