@@ -232,14 +232,8 @@ async fn main(spawner: Spawner) {
         read_peripheral_addresses::<1, _, ROW, COL, NUM_LAYER, NUM_ENCODER>(&mut storage).await;
 
     // Initialize the processors
-    let mut battery_device_left = NrfAdc::new(
-        saadc,
-        [AnalogEventType::Battery],
-        Duration::from_ticks(1000),
-        None,
-    );
     let local_channel: Channel<NoopRawMutex, Event, 16> = Channel::new();
-    let mut joystick_device_left = NrfAdc::new(
+    let mut local_analog_devices = NrfAdc::new(
         saadc,
         [AnalogEventType::Joystick(2)],
         Duration::from_ticks(20),
@@ -284,12 +278,12 @@ async fn main(spawner: Spawner) {
     // Start
     join4(
         run_devices! (
-            (matrix, battery_device_left) => EVENT_CHANNEL,
-            (joystick_device_left) => local_channel
+            (matrix) => EVENT_CHANNEL,
+            (local_analog_devices) => local_channel
         ),
         run_processor_chain! {
-            local_channel => [joystick_processor_left],
-            EVENT_CHANNEL => [joystick_processor_right, batt_proc],
+            local_channel => [joystick_processor_left, batt_proc],
+            EVENT_CHANNEL => [joystick_processor_right],
         },
         keyboard.run(),
         join(
