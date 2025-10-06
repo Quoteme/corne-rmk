@@ -146,14 +146,6 @@ async fn main(spawner: Spawner) {
         Duration::from_ticks(20),        /* polling interval */
         Some(Duration::from_ticks(300)), /* light sleep interval */
     );
-    // let speed = 4.0;
-    // let mut joy_proc = joystick::JoystickProcessor::new(
-    //     [[0.001 * speed, 0.0], [0.0, 0.001 * speed]],
-    //     [28600, 29555],
-    //     [0.4, 0.35],
-    //     &keymap,
-    //     joystick::KeyboardSide::Right,
-    // );
 
     let (input_pins, output_pins) = config_matrix_pins_nrf!(
         peripherals: p,
