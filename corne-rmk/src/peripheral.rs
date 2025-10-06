@@ -26,6 +26,7 @@ use rmk::channel::EVENT_CHANNEL;
 use rmk::config::macro_config::KeyboardMacrosConfig;
 use rmk::config::{BehaviorConfig, StorageConfig};
 use rmk::debounce::default_debouncer::DefaultDebouncer;
+use rmk::futures::future::join;
 use rmk::futures::future::join3;
 use rmk::input_device::adc::{AnalogEventType, NrfAdc};
 use rmk::input_device::battery::BatteryProcessor;
@@ -145,25 +146,14 @@ async fn main(spawner: Spawner) {
         Duration::from_ticks(20),        /* polling interval */
         Some(Duration::from_ticks(300)), /* light sleep interval */
     );
-    let mut default_keymap = keymap::get_default_keymap();
-    let mut behavior_config = BehaviorConfig {
-        tri_layer: Some([1, 2, 3]),
-        keyboard_macros: KeyboardMacrosConfig {
-            macro_sequences: keymap::get_macro_sequences(),
-        },
-        ..BehaviorConfig::default()
-    };
-    let mut encoder_map = keymap::get_default_encoder_map();
-    let keymap = initialize_keymap(&mut default_keymap, behavior_config).await;
-    let mut batt_proc = BatteryProcessor::new(1, 5, &keymap);
-    let speed = 4.0;
-    let mut joy_proc = joystick::JoystickProcessor::new(
-        [[0.001 * speed, 0.0], [0.0, 0.001 * speed]],
-        [28600, 29555],
-        [0.4, 0.35],
-        &keymap,
-        joystick::KeyboardSide::Right,
-    );
+    // let speed = 4.0;
+    // let mut joy_proc = joystick::JoystickProcessor::new(
+    //     [[0.001 * speed, 0.0], [0.0, 0.001 * speed]],
+    //     [28600, 29555],
+    //     [0.4, 0.35],
+    //     &keymap,
+    //     joystick::KeyboardSide::Right,
+    // );
 
     let (input_pins, output_pins) = config_matrix_pins_nrf!(
         peripherals: p,
@@ -191,13 +181,10 @@ async fn main(spawner: Spawner) {
         Matrix::<_, _, _, INPUT_PIN_NUM, OUTPUT_PIN_NUM>::new(input_pins, output_pins, debouncer);
     // let mut matrix = rmk::matrix::TestMatrix::<4, 7>::new();
 
-    join3(
+    join(
         run_devices! (
             (matrix, adc_dev) => EVENT_CHANNEL, // Peripheral uses EVENT_CHANNEL to send events to central
         ),
-        run_processor_chain! {
-            EVENT_CHANNEL => [joy_proc, batt_proc],
-        },
         run_rmk_split_peripheral(0, &stack, &mut storage),
     )
     .await;
