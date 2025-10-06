@@ -25,12 +25,13 @@ use nrf_sdc::{self as sdc, mpsl};
 use rand_chacha::ChaCha12Rng;
 use rand_core::SeedableRng;
 use rmk::ble::trouble::build_ble_stack;
-use rmk::channel::EVENT_CHANNEL;
+use rmk::channel::{blocking_mutex::raw::NoopRawMutex, channel::Channel, EVENT_CHANNEL};
 use rmk::config::macro_config::KeyboardMacrosConfig;
 use rmk::config::{
     BehaviorConfig, BleBatteryConfig, KeyboardUsbConfig, RmkConfig, StorageConfig, VialConfig,
 };
 use rmk::debounce::default_debouncer::DefaultDebouncer;
+use rmk::event::Event;
 use rmk::futures::future::{join, join4};
 use rmk::input_device::adc::{AnalogEventType, NrfAdc};
 use rmk::input_device::battery::BatteryProcessor;
@@ -230,10 +231,11 @@ async fn main(spawner: Spawner) {
     let peripheral_addrs =
         read_peripheral_addresses::<1, _, ROW, COL, NUM_LAYER, NUM_ENCODER>(&mut storage).await;
 
-    // Initialize the encoder process or
-    let mut adc_device = NrfAdc::new(
+    // Initialize the processors
+    let local_channel: Channel<NoopRawMutex, Event, 16> = Channel::new();
+    let mut local_analog_devices = NrfAdc::new(
         saadc,
-        [AnalogEventType::Battery, AnalogEventType::Joystick(2)],
+        [AnalogEventType::Joystick(2)],
         Duration::from_ticks(20),
         Some(Duration::from_ticks(300)),
     );
@@ -244,18 +246,25 @@ async fn main(spawner: Spawner) {
     // down is [-288XX, -269XX]
     // neutral is [-282XX, -293XX]
     // the last to digits are useless
-    // thre third last digit is unreliable
+    // the third last digit is unreliable
     // the leading two digigs are reliable
     // up - down =  [0, -5900]
     // left - right = [-5200, 0]
     // =====> bias = -[-5200, -5900]
     let speed = 4.0;
-    let mut joy_proc = joystick::JoystickProcessor::new(
+    let mut joystick_processor_left = joystick::JoystickProcessor::new(
         [[-0.001 * speed, 0.0], [0.0, 0.001 * speed]],
         [28600, 29555],
         [0.4, 0.15],
         &keymap,
         joystick::KeyboardSide::Left,
+    );
+    let mut joystick_processor_right = joystick::JoystickProcessor::new(
+        [[0.001 * speed, 0.0], [0.0, 0.001 * speed]],
+        [28600, 29555],
+        [0.4, 0.35],
+        &keymap,
+        joystick::KeyboardSide::Right,
     );
 
     // Initialize the controllers
@@ -269,10 +278,12 @@ async fn main(spawner: Spawner) {
     // Start
     join4(
         run_devices! (
-            (matrix, adc_device) => EVENT_CHANNEL,
+            (matrix) => EVENT_CHANNEL,
+            (local_analog_devices) => local_channel
         ),
         run_processor_chain! {
-            EVENT_CHANNEL => [joy_proc, batt_proc],
+            local_channel => [joystick_processor_left, batt_proc],
+            EVENT_CHANNEL => [joystick_processor_right],
         },
         keyboard.run(),
         join(
