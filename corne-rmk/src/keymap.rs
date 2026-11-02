@@ -56,9 +56,9 @@ pub const fn get_default_keymap() -> [[[KeyAction; COL]; ROW]; NUM_LAYER] {
             [k!(No), k!(No),     k!(No),     k!(LShift), TRAN,       k!(Space),   /* */ ENTER_SHIFT, TRAN,      k!(LCtrl), k!(No),  k!(No), k!(No)]
         ],
         [
-             [k!(No), k!(No), k!(No), k!(No), k!(No), k!(No), /* */ k!(No), k!(No), k!(No), k!(No), k!(No), k!(No)],
-             [k!(No), k!(No), k!(No), k!(No), k!(No), k!(No), /* */ k!(No), k!(No), k!(No), k!(No), k!(No), k!(No) ],
-             [k!(No), k!(No), k!(No), k!(No), k!(No), k!(No), /* */ k!(No), k!(No), k!(No), k!(No), k!(No), k!(No) ],
+             [k!(No),            k!(No), k!(No), k!(No), k!(No), k!(No), /* */ k!(No), k!(No), k!(No), k!(No), k!(No), k!(No)],
+             [k!(BacklightUp),   k!(No), k!(No), k!(No), k!(No), k!(No), /* */ k!(No), k!(No), k!(No), k!(No), k!(No), k!(No) ],
+             [k!(BacklightDown), k!(No), k!(No), k!(No), k!(No), k!(No), /* */ k!(No), k!(No), k!(No), k!(No), k!(No), k!(No) ],
              [k!(No), k!(No), k!(No), k!(No), k!(No), k!(No), /* */ k!(No), k!(No), k!(No), k!(No), k!(No), k!(No) ] 
         ],
     ]

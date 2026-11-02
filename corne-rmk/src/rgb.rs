@@ -25,7 +25,9 @@ use embassy_sync::signal::Signal;
 use embassy_time::Timer;
 use rmk::channel::{ControllerSub, CONTROLLER_CHANNEL};
 use rmk::controller::{Controller, EventController};
-use rmk::event::ControllerEvent;
+use rmk::action::{Action, KeyAction};
+use rmk::event::{ControllerEvent, KeyboardEvent};
+use rmk::keycode::KeyCode;
 
 use crate::joystick::KeyboardSide;
 use crate::keymap::{COL, NUM_LAYER, ROW};
@@ -168,6 +170,18 @@ pub fn set_brightness(brightness: u8) {
     REDRAW.signal(());
 }
 
+/// Brightness change per `BacklightUp` / `BacklightDown` key press.
+pub const BRIGHTNESS_STEP: u8 = 16;
+
+/// Change the brightness by `delta`, clamped to 0..=255 (0 = off).
+pub fn change_brightness(delta: i16) {
+    STATE.lock(|s| {
+        let mut s = s.borrow_mut();
+        s.brightness = (s.brightness as i16 + delta).clamp(0, 255) as u8;
+    });
+    REDRAW.signal(());
+}
+
 // WS2812 timing with a 16 MHz PWM clock: 20 ticks = 1.25 us per bit.
 // The high bit inverts the polarity so the pulse starts high.
 const T1H: u16 = 0x8000 | 13;
@@ -252,7 +266,8 @@ impl<'d, T: Instance> RgbLeds<'d, T> {
     }
 }
 
-/// Switches the key colors to [`LAYER_COLORS`] of the active layer.
+/// Switches the key colors to [`LAYER_COLORS`] of the active layer and handles
+/// the `BacklightUp` / `BacklightDown` keycodes.
 ///
 /// Only works on the central: RMK doesn't sync the layer to the peripheral,
 /// so the peripheral keeps showing whatever was set via [`set_key_color`] etc.
@@ -272,8 +287,16 @@ impl Controller for LayerRgbController {
     type Event = ControllerEvent;
 
     async fn process_event(&mut self, event: Self::Event) {
-        if let ControllerEvent::Layer(layer) = event {
-            show_layer(layer as usize);
+        match event {
+            ControllerEvent::Layer(layer) => show_layer(layer as usize),
+            ControllerEvent::Key(event, KeyAction::Single(Action::Key(key))) if is_press(event) => {
+                match key {
+                    KeyCode::BacklightUp => change_brightness(BRIGHTNESS_STEP as i16),
+                    KeyCode::BacklightDown => change_brightness(-(BRIGHTNESS_STEP as i16)),
+                    _ => (),
+                }
+            }
+            _ => (),
         }
     }
 
@@ -283,3 +306,9 @@ impl Controller for LayerRgbController {
 }
 
 impl EventController for LayerRgbController {}
+
+/// `KeyboardEvent::pressed` is private in RMK 0.7, so compare against all
+/// possible pressed key events instead.
+fn is_press(event: KeyboardEvent) -> bool {
+    (0..ROW as u8).any(|row| (0..COL as u8).any(|col| event == KeyboardEvent::key(row, col, true)))
+}
