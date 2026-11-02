@@ -3,6 +3,8 @@
 
 mod joystick;
 mod keymap;
+#[allow(dead_code)]
+mod rgb;
 
 #[macro_use]
 mod macros;
@@ -26,7 +28,7 @@ use rmk::channel::EVENT_CHANNEL;
 use rmk::config::macro_config::KeyboardMacrosConfig;
 use rmk::config::{BehaviorConfig, StorageConfig};
 use rmk::debounce::default_debouncer::DefaultDebouncer;
-use rmk::futures::future::join3;
+use rmk::futures::future::join4;
 use rmk::input_device::adc::{AnalogEventType, NrfAdc};
 use rmk::input_device::battery::BatteryProcessor;
 use rmk::matrix::Matrix;
@@ -190,7 +192,10 @@ async fn main(spawner: Spawner) {
         Matrix::<_, _, _, INPUT_PIN_NUM, OUTPUT_PIN_NUM>::new(input_pins, output_pins, debouncer);
     // let mut matrix = rmk::matrix::TestMatrix::<4, 7>::new();
 
-    join3(
+    // Per-key RGB: data on P0_06 (Corne LED pin), LED power via nice!nano EXT VCC (P0_13)
+    let mut rgb_leds = rgb::RgbLeds::new(p.PWM0, p.P0_06, p.P0_13, joystick::KeyboardSide::Right);
+
+    join4(
         run_devices! (
             (matrix, adc_dev) => EVENT_CHANNEL, // Peripheral uses EVENT_CHANNEL to send events to central
         ),
@@ -198,6 +203,7 @@ async fn main(spawner: Spawner) {
             EVENT_CHANNEL => [joy_proc, batt_proc],
         },
         run_rmk_split_peripheral(0, &stack, &mut storage),
+        rgb_leds.run(),
     )
     .await;
 }

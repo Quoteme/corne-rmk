@@ -6,6 +6,7 @@ mod vial;
 mod macros;
 mod joystick;
 mod keymap;
+mod rgb;
 
 use crate::keymap::{COL, COL_OFFSET, NUM_ENCODER, NUM_LAYER, ROW};
 use defmt::{info, unwrap};
@@ -31,7 +32,8 @@ use rmk::config::{
     BehaviorConfig, BleBatteryConfig, KeyboardUsbConfig, RmkConfig, StorageConfig, VialConfig,
 };
 use rmk::debounce::default_debouncer::DefaultDebouncer;
-use rmk::futures::future::{join, join4};
+use rmk::controller::EventController;
+use rmk::futures::future::join4;
 use rmk::input_device::adc::{AnalogEventType, NrfAdc};
 use rmk::input_device::battery::BatteryProcessor;
 use rmk::input_device::joystick::JoystickProcessor;
@@ -247,6 +249,9 @@ async fn main(spawner: Spawner) {
     );
 
     // Initialize the controllers
+    // Per-key RGB: data on P0_06 (Corne LED pin), LED power via nice!nano EXT VCC (P0_13)
+    let mut rgb_leds = rgb::RgbLeds::new(p.PWM0, p.P0_06, p.P0_13, joystick::KeyboardSide::Left);
+    let mut rgb_controller = rgb::LayerRgbController::new();
     let mut light_controller: LightController<Output> =
         LightController::new(rmk::config::LightConfig {
             capslock: None,
@@ -263,7 +268,9 @@ async fn main(spawner: Spawner) {
             EVENT_CHANNEL => [joy_proc, batt_proc],
         },
         keyboard.run(),
-        join(
+        join4(
+            rgb_leds.run(),
+            rgb_controller.event_loop(),
             run_peripheral_manager::<4, 7, 0, COL_OFFSET, _>(0, peripheral_addrs[0], &stack),
             run_rmk(
                 &keymap,

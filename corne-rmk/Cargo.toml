@@ -55,6 +55,7 @@ defmt = "1.0"
 defmt-rtt = "1.0"
 panic-probe = { version = "1.0", features = ["print-defmt"] }
 static_cell = "2"
+embassy-sync = "0.7"
 
 rand = { version = "0.8.4", default-features = false }
 rand_core = { version = "0.6" }
